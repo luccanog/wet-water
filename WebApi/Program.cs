@@ -7,6 +7,16 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+//Load available words
+var availableWords = app.Configuration
+	.GetValue<string>("AvailableWords")
+	.Split(';');
+
+
+Random random = new();
+var wordIndex = random.Next(0, availableWords.Count() - 1);
+var dailyWord = availableWords[wordIndex];
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -16,28 +26,25 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapGet("/words", () =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateTime.Now.AddDays(index),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+	return availableWords;
 })
-.WithName("GetWeatherForecast");
+.WithName("Get all available words");
+
+app.MapGet("/words/daily", () =>
+{
+	return dailyWord;
+})
+.WithName("Get the daily word to be guessed");
+
+app.MapGet("/words/{word}/assert", (string word) =>
+{
+	return word == dailyWord
+		? Results.Ok("Success!")
+		: Results.NotFound("Fail");
+}) 
+.WithName("Check if the provided word is correct.");
 
 app.Run();
 
-record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
